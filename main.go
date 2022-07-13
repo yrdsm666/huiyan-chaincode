@@ -12,14 +12,22 @@ import (
 type ConfidentialMessageBySender struct {
 	Sender    string   `json:"sender"`
 	Receivers []string `json:"receivers"`
-	Message   string   `json:"message"`
+	Message   []byte   `json:"message"`
+	Note      string   `json:"note"`
 	//Number   int    `json:"number"`
 }
 
 type MessageForReceiver struct {
 	Sender   string   `json:"sender"`
 	Receiver string   `json:"receiver"`
-	Messages []string `json:"messages"`
+	Messages [][]byte `json:"messages"`
+	Notes    []string `json:"notes"`
+	//Number   int    `json:"number"`
+}
+
+type ReturnMessages struct {
+	Messages [][]byte `json:"messages"`
+	Notes    []string `json:"notes"`
 	//Number   int    `json:"number"`
 }
 
@@ -133,6 +141,9 @@ func (s *SmartContract) CreateConfidentialMessageBySender(ctx contractapi.Transa
 	if len(messageInput.Message) == 0 {
 		return fmt.Errorf("message field must be a non-empty string")
 	}
+	if len(messageInput.Note) == 0 {
+		return fmt.Errorf("note field must be a non-empty string")
+	}
 
 	// Get the MSP ID of submitting client identity
 	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
@@ -150,7 +161,8 @@ func (s *SmartContract) CreateConfidentialMessageBySender(ctx contractapi.Transa
 
 	for i := 0; i < len(messageInput.Receivers); i++ {
 		// ==== Check if message already exists ====
-		var messages []string
+		var messages [][]byte
+		var notes []string
 
 		oldMessageAsBytes, err := ctx.GetStub().GetPrivateData(messageInput.Sender+"MSPCollection", messageInput.Receivers[i])
 		if err != nil {
@@ -163,6 +175,8 @@ func (s *SmartContract) CreateConfidentialMessageBySender(ctx contractapi.Transa
 			}
 			messages = oldMessage.Messages
 			messages = append(messages, messageInput.Message)
+			notes = oldMessage.Notes
+			notes = append(notes, messageInput.Note)
 		} else if oldMessageAsBytes == nil {
 			messages = append(messages, messageInput.Message)
 		}
@@ -172,6 +186,7 @@ func (s *SmartContract) CreateConfidentialMessageBySender(ctx contractapi.Transa
 			Sender:   messageInput.Sender,
 			Receiver: messageInput.Receivers[i],
 			Messages: messages,
+			Notes:    notes,
 		}
 
 		newMessageJSONasBytes, err := json.Marshal(newMessage)
@@ -192,6 +207,7 @@ func (s *SmartContract) CreateConfidentialMessageBySender(ctx contractapi.Transa
 	return nil
 }
 
+// 一次性输出某个接收者的所有消息，但是这个函数的功能无法实现，可以忽略
 func (s *SmartContract) ReadAllConfidentialMessageByReceiver(ctx contractapi.TransactionContextInterface, receiver string) ([]MessageForReceiver, error) {
 	// Get the MSP ID of submitting client identity
 	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
@@ -221,7 +237,8 @@ func (s *SmartContract) ReadAllConfidentialMessageByReceiver(ctx contractapi.Tra
 		newMessage := MessageForReceiver{
 			Sender:   senders[i],
 			Receiver: receiver,
-			Messages: messages,
+			Messages: messages.Messages,
+			Notes:    messages.Notes,
 		}
 
 		messageToReceivers = append(messageToReceivers, newMessage)
@@ -229,7 +246,7 @@ func (s *SmartContract) ReadAllConfidentialMessageByReceiver(ctx contractapi.Tra
 	return messageToReceivers, nil
 }
 
-func (s *SmartContract) ReadConfidentialMessage(ctx contractapi.TransactionContextInterface, sender string, receiver string) ([]string, error) {
+func (s *SmartContract) ReadConfidentialMessage(ctx contractapi.TransactionContextInterface, sender string, receiver string) (*ReturnMessages, error) {
 	// Get the MSP ID of submitting client identity
 	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
@@ -257,7 +274,12 @@ func (s *SmartContract) ReadConfidentialMessage(ctx contractapi.TransactionConte
 		return nil, fmt.Errorf("failed to unmarshal JSON: %v", err)
 	}
 
-	return message.Messages, nil
+	resMessage := ReturnMessages{
+		Messages: message.Messages,
+		Notes:    message.Notes,
+	}
+
+	return &resMessage, nil
 }
 
 // MessageNoticeExists returns true when messageNotice with given ID exists in world state
