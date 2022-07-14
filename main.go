@@ -179,7 +179,7 @@ func (s *SmartContract) CreateConfidentialMessageBySender(ctx contractapi.Transa
 			notes = append(notes, messageInput.Note)
 		} else if oldMessageAsBytes == nil {
 			messages = append(messages, messageInput.Message)
-			notes = append(notes, messageInput.note)
+			notes = append(notes, messageInput.Note)
 		}
 
 		// ==== Create message object, marshal to JSON, and update to state ====
