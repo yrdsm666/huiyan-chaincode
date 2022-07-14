@@ -179,6 +179,7 @@ func (s *SmartContract) CreateConfidentialMessageBySender(ctx contractapi.Transa
 			notes = append(notes, messageInput.Note)
 		} else if oldMessageAsBytes == nil {
 			messages = append(messages, messageInput.Message)
+			notes = append(notes, messageInput.note)
 		}
 
 		// ==== Create message object, marshal to JSON, and update to state ====
@@ -265,7 +266,7 @@ func (s *SmartContract) ReadConfidentialMessage(ctx contractapi.TransactionConte
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get message: " + err.Error())
 	} else if messageAsBytes == nil {
-		return nil, fmt.Errorf("there is no messgae to %s in %s", receiver, sender+"collection")
+		return nil, fmt.Errorf("there is no messgae to %s in %s", receiver, sender+"MSPCollection")
 	}
 
 	var message MessageForReceiver
