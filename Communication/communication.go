@@ -209,45 +209,45 @@ func (s *SmartContract) CreateConfidentialMessageBySender(ctx contractapi.Transa
 }
 
 // 一次性输出某个接收者的所有消息，但是这个函数的功能无法实现，可以忽略
-func (s *SmartContract) ReadAllConfidentialMessageByReceiver(ctx contractapi.TransactionContextInterface, receiver string) ([]MessageForReceiver, error) {
-	// Get the MSP ID of submitting client identity
-	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get verified MSPID: %v", err)
-	}
-	if receiver+"MSP" != clientMSPID {
-		return nil, fmt.Errorf("receiver is client MSPID is not match: %v", err)
-	}
+// func (s *SmartContract) ReadAllConfidentialMessageByReceiver(ctx contractapi.TransactionContextInterface, receiver string) ([]MessageForReceiver, error) {
+// 	// Get the MSP ID of submitting client identity
+// 	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to get verified MSPID: %v", err)
+// 	}
+// 	if receiver+"MSP" != clientMSPID {
+// 		return nil, fmt.Errorf("receiver is client MSPID is not match: %v", err)
+// 	}
 
-	// err = verifyClientOrgMatchesPeerOrg(ctx)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("CreateMessage cannot be performed: Error %v", err)
-	// }
+// 	// err = verifyClientOrgMatchesPeerOrg(ctx)
+// 	// if err != nil {
+// 	// 	return nil, fmt.Errorf("CreateMessage cannot be performed: Error %v", err)
+// 	// }
 
-	senders, err := s.ReadMessageNotice(ctx, receiver)
-	if err != nil {
-		return nil, fmt.Errorf("%s read message notice failed: %v", receiver, err)
-	}
+// 	senders, err := s.ReadMessageNotice(ctx, receiver)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("%s read message notice failed: %v", receiver, err)
+// 	}
 
-	var messageToReceivers []MessageForReceiver
-	for i := 0; i < len(senders); i++ {
-		messages, err := s.ReadConfidentialMessage(ctx, senders[i], receiver)
-		if err != nil {
-			return nil, fmt.Errorf("%s read %s message failed: %v", receiver, senders[i], err)
-		}
-		newMessage := MessageForReceiver{
-			Sender:   senders[i],
-			Receiver: receiver,
-			Messages: messages.Messages,
-			Notes:    messages.Notes,
-		}
+// 	var messageToReceivers []MessageForReceiver
+// 	for i := 0; i < len(senders); i++ {
+// 		messages, err := s.ReadConfidentialMessage(ctx, senders[i], receiver)
+// 		if err != nil {
+// 			return nil, fmt.Errorf("%s read %s message failed: %v", receiver, senders[i], err)
+// 		}
+// 		newMessage := MessageForReceiver{
+// 			Sender:   senders[i],
+// 			Receiver: receiver,
+// 			Messages: messages.Messages,
+// 			Notes:    messages.Notes,
+// 		}
 
-		messageToReceivers = append(messageToReceivers, newMessage)
-	}
-	return messageToReceivers, nil
-}
+// 		messageToReceivers = append(messageToReceivers, newMessage)
+// 	}
+// 	return messageToReceivers, nil
+// }
 
-func (s *SmartContract) ReadConfidentialMessage(ctx contractapi.TransactionContextInterface, sender string, receiver string) (*MessageForReceiver, error) {
+func (s *SmartContract) ReadConfidentialMessage(ctx contractapi.TransactionContextInterface, sender string, receiver string) (*ReturnMessages, error) {
 	// Get the MSP ID of submitting client identity
 	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
@@ -275,7 +275,17 @@ func (s *SmartContract) ReadConfidentialMessage(ctx contractapi.TransactionConte
 		return nil, fmt.Errorf("failed to unmarshal JSON: %v", err)
 	}
 
-	return &message, nil
+	var messagesStr []string
+	for i := 0; i < len(message.Messages); i++ {
+		messagesStr = append(messagesStr, string(message.Messages[i]))
+	}
+
+	resMessages := ReturnMessages{
+		Messages: messagesStr,
+		Notes:    message.Notes,
+	}
+
+	return &resMessages, nil
 }
 
 // MessageNoticeExists returns true when messageNotice with given ID exists in world state
